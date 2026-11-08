@@ -92,31 +92,17 @@ async function runBuild() {
     obfuscateFile(path.join(ROOT_DIR, 'engine', 'campaignManager.js'), path.join(STAGING_DIR, 'engine', 'campaignManager.js'));
     obfuscateFile(path.join(ROOT_DIR, 'public', 'app.js'), path.join(STAGING_DIR, 'public', 'app.js'));
 
-    // Step 4: Package with caxa into Standalone .EXE
-    console.log('\n[4/5] Packaging standalone executable with caxa...');
-    const outputExePath = path.join(DIST_DIR, 'ProtonDrivePro.exe');
-
-    const caxaCmd = `npx caxa --input "${STAGING_DIR}" --output "${outputExePath}" -m "Starting Proton Drive Suite Pro, please wait..." -- "{{caxa}}/node_modules/.bin/node" "{{caxa}}/server.js"`;
-
-    try {
-        execSync(caxaCmd, { stdio: 'inherit', cwd: ROOT_DIR });
-        const stats = fs.statSync(outputExePath);
-        console.log(`      ✓ Standalone binary created: ${(stats.size / (1024 * 1024)).toFixed(2)} MB`);
-    } catch (err) {
-        console.error('[ERROR] Packaging failed:', err.message);
-        process.exit(1);
-    } finally {
-        console.log('      Cleaning up staging directory...');
-        fs.rmSync(STAGING_DIR, { recursive: true, force: true });
-    }
-
-    // Step 5: Inject Official Proton Icon & Windows Executable Metadata
-    console.log('\n[5/5] Injecting Proton official icon & metadata into ProtonDrivePro.exe...');
+    // Step 4: Inject Official Proton Icon into Custom Caxa Stub
+    console.log('\n[4/5] Embedding official Proton icon & metadata into executable stub...');
     const iconPath = path.join(ROOT_DIR, 'icon.ico');
+    const baseStubPath = path.join(ROOT_DIR, 'node_modules', 'caxa', 'stubs', 'stub--win32--x64');
+    const customStubPath = path.join(ROOT_DIR, 'custom_stub.exe');
 
-    if (fs.existsSync(iconPath)) {
+    let useStubArg = '';
+    if (fs.existsSync(iconPath) && fs.existsSync(baseStubPath)) {
         try {
-            await rcedit(outputExePath, {
+            fs.copyFileSync(baseStubPath, customStubPath);
+            await rcedit(customStubPath, {
                 icon: iconPath,
                 'file-version': '1.0.0',
                 'product-version': '1.0.0',
@@ -127,10 +113,35 @@ async function runBuild() {
                     'LegalCopyright': 'Copyright (C) BYRION'
                 }
             });
-            console.log('      ✓ Official Proton application icon successfully embedded into .EXE!');
+
+            // Re-append caxa's 14-byte archive separator stripped by Windows PE resource editor
+            fs.appendFileSync(customStubPath, Buffer.from('\nCAXACAXACAXA\n'));
+            useStubArg = `--stub "${customStubPath}" `;
+            console.log('      ✓ Proton application icon & metadata successfully embedded into stub!');
         } catch (e) {
-            console.warn('      [WARN] Could not inject icon:', e.message);
+            console.warn('      [WARN] Could not prepare custom icon stub, falling back to default:', e.message);
+            if (fs.existsSync(customStubPath)) fs.unlinkSync(customStubPath);
+            useStubArg = '';
         }
+    }
+
+    // Step 5: Package with caxa into Standalone .EXE
+    console.log('\n[5/5] Packaging standalone executable with caxa...');
+    const outputExePath = path.join(DIST_DIR, 'ProtonDrivePro.exe');
+
+    const caxaCmd = `npx caxa ${useStubArg}--input "${STAGING_DIR}" --output "${outputExePath}" -m "Starting Proton Drive Suite Pro, please wait..." -- "{{caxa}}/node_modules/.bin/node.exe" "{{caxa}}/server.js"`;
+
+    try {
+        execSync(caxaCmd, { stdio: 'inherit', cwd: ROOT_DIR });
+        const stats = fs.statSync(outputExePath);
+        console.log(`      ✓ Standalone binary created: ${(stats.size / (1024 * 1024)).toFixed(2)} MB`);
+    } catch (err) {
+        console.error('[ERROR] Packaging failed:', err.message);
+        process.exit(1);
+    } finally {
+        console.log('      Cleaning up staging directory and temporary stub...');
+        fs.rmSync(STAGING_DIR, { recursive: true, force: true });
+        if (fs.existsSync(customStubPath)) fs.unlinkSync(customStubPath);
     }
 
     console.log('\n====================================================');
