@@ -84,7 +84,29 @@ function broadcast(type, payload) {
 campaignManager.on('log', (logEntry) => broadcast('log', logEntry));
 campaignManager.on('stats', (stats) => broadcast('stats', stats));
 
+let activeClients = 0;
+let shutdownTimer = null;
+
 wss.on('connection', (ws) => {
+    activeClients++;
+    if (shutdownTimer) {
+        clearTimeout(shutdownTimer);
+        shutdownTimer = null;
+    }
+
+    ws.on('close', () => {
+        activeClients = Math.max(0, activeClients - 1);
+        if (activeClients === 0) {
+            // Grace period: if no clients reconnect within 10 seconds, exit
+            shutdownTimer = setTimeout(() => {
+                if (activeClients === 0) {
+                    console.log('[DESKTOP] Application window closed by user. Exiting suite...');
+                    process.exit(0);
+                }
+            }, 10000);
+        }
+    });
+
     ws.send(JSON.stringify({
         type: 'init',
         payload: {
@@ -438,7 +460,7 @@ process.on('unhandledRejection', (reason) => {
 function launchDesktopAppWindow(port) {
     if (process.platform !== 'win32') return;
 
-    const url = `http://localhost:${port}`;
+    const url = `http://127.0.0.1:${port}`;
     const edgePaths = [
         'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
         'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe'
@@ -459,30 +481,27 @@ function launchDesktopAppWindow(port) {
 
     if (appExe) {
         const appWindowDir = path.join(process.env.LOCALAPPDATA || process.env.TEMP, 'ProtonDrivePro_AppWindow');
-        const appProcess = spawn(appExe, [
-            `--app=${url}`,
-            `--user-data-dir=${appWindowDir}`,
-            '--window-size=1380,880',
-            '--window-position=100,50',
-            '--disable-extensions',
-            '--disable-plugins',
-            '--disable-background-networking',
-            `--app-id=ProtonDrivePro`
-        ], {
-            detached: false,
-            stdio: 'ignore'
-        });
+        try {
+            const appProcess = spawn(appExe, [
+                `--app=${url}`,
+                `--user-data-dir=${appWindowDir}`,
+                '--window-size=1380,880',
+                '--window-position=100,50',
+                '--disable-extensions',
+                '--disable-plugins',
+                '--disable-background-networking',
+                `--app-id=ProtonDrivePro`
+            ], {
+                detached: true,
+                stdio: 'ignore'
+            });
 
-        // When user closes the native app window, terminate background server process
-        appProcess.on('exit', () => {
-            console.log('\n[DESKTOP] Application window closed by user. Exiting suite...');
-            process.exit(0);
-        });
-
-        appProcess.on('error', (err) => {
-            console.warn('[DESKTOP] App window spawn warning:', err.message);
+            // Detach child process so launcher process exit does not affect background server
+            appProcess.unref();
+        } catch (err) {
+            console.warn('[DESKTOP] App window spawn fallback:', err.message);
             exec(`start ${url}`);
-        });
+        }
     } else {
         exec(`start ${url}`);
     }
@@ -490,10 +509,10 @@ function launchDesktopAppWindow(port) {
 
 // Start Server
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`\n======================================================`);
     console.log(`  Proton Drive Auto-Share Dashboard is Running!`);
-    console.log(`  URL: http://localhost:${PORT}`);
+    console.log(`  URL: http://127.0.0.1:${PORT}`);
     console.log(`======================================================\n`);
 
     // Background KeyAuth initialization & auto-login check
@@ -509,6 +528,8 @@ server.listen(PORT, () => {
         console.error(`[AUTH] KeyAuth connection: ${err.message}`);
     });
 
-    // Launch as standalone native desktop window
-    launchDesktopAppWindow(PORT);
+    // Launch standalone window after short delay to ensure socket is ready
+    setTimeout(() => {
+        launchDesktopAppWindow(PORT);
+    }, 500);
 });
