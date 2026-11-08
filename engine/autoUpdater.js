@@ -8,7 +8,7 @@ const LOCAL_VERSION = require('../package.json').version || '1.0.0';
 
 // GitHub repository details (can be customized via settings or env)
 const GITHUB_REPO_OWNER = process.env.GITHUB_OWNER || 'bayzeed98';
-const GITHUB_REPO_NAME = process.env.GITHUB_REPO || 'proton-drive-app';
+const GITHUB_REPO_NAME = process.env.GITHUB_REPO || 'Proton-Drive-Pro';
 const VERSION_URL = `https://raw.githubusercontent.com/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/main/version.json`;
 
 function fetchJson(url) {
