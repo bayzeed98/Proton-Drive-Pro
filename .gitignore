@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build and Distribution
+dist/
+build_staging/
+
+# Temporary and profile storage
+data/profiles/
+data/auth_config.json
+data/accounts.json
+data/leads.json
+data/history.json
+data/history_archive.json
+debug/screenshots/*
+!debug/screenshots/.gitkeep
+uploads/*
+!uploads/.gitkeep
+
+# User local data
+accounts.txt
+leads.txt
+message.txt
+
+# Logs and environment
+*.log
+.env
+.DS_Store
+Thumbs.db

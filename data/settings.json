@@ -1,0 +1,13 @@
+{
+  "headless": true,
+  "browser": "chrome",
+  "threads": 1,
+  "leadsPerAccount": 5,
+  "delayBetweenLeadsMs": 350,
+  "inviteMessage": "Hi, please review the shared document securely on Proton Drive....LK",
+  "selectedPdf": "D:\\app-project\\proton drive app\\uploads\\1794113283198-3543.pdf",
+  "proxies": [],
+  "rotateProxy": false,
+  "autoRetry": false,
+  "port": 3000
+}

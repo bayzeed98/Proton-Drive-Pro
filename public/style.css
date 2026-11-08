@@ -1,0 +1,60 @@
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #090d16;
+}
+::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #334155;
+}
+
+/* Glass & Glow */
+.nav-btn.active {
+    color: #c084fc !important;
+    background-color: rgba(168, 85, 247, 0.12) !important;
+    border-color: rgba(168, 85, 247, 0.3) !important;
+}
+
+/* Terminal Log Styling */
+.log-info {
+    color: #94a3b8;
+}
+.log-success {
+    color: #10b981;
+    font-weight: 500;
+}
+.log-warn {
+    color: #fbbf24;
+}
+.log-error {
+    color: #f43f5e;
+    font-weight: 600;
+}
+
+/* BYRION 3D Extrusion Text Effect */
+.byrion-3d {
+    color: #00E5FF;
+    font-weight: 900;
+    letter-spacing: 3px;
+    text-shadow:
+        1px 1px 0px #006b7a,
+        2px 2px 0px #006b7a,
+        3px 3px 0px #006b7a,
+        4px 4px 0px #006b7a,
+        5px 5px 0px #006b7a,
+        6px 6px 0px #006b7a,
+        7px 7px 0px #006b7a,
+        0 0 25px rgba(0, 229, 255, 0.5);
+}
+
+.auth-card {
+    background-color: #0b1120;
+    border: 1px solid rgba(147, 51, 234, 0.3);
+    box-shadow: 0 0 50px rgba(147, 51, 234, 0.15), 0 25px 50px -12px rgba(0, 0, 0, 0.85);
+}
